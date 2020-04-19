@@ -26,7 +26,7 @@ def for_fa(all_data: pd.DataFrame,
     """
     x = (all_data[all_data.columns[metrics_start:]]).values
     if normalise:
-        x = RobustScaler(copy=False).fit(x)
+        x = RobustScaler(copy=False).fit_transform(x)
     return x.T
 
 

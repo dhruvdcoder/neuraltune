@@ -28,9 +28,9 @@ if __name__=='__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--ncomponents', type=int, required=True,
             help='Number of components param to be passed to FA.')   
-    parser.add_argument('--workers', type=int, default=3,
+    parser.add_argument('--workers', type=int, default=5,
             help='pool size for multiprocessing')
-    parser.add_argument('--folds', type=int, default=3,
+    parser.add_argument('--folds', type=int, default=5,
             help='K for Kfolds')      
     args = parser.parse_args()
     logging.info('Loading data!')
