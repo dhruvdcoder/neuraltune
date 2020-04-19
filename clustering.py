@@ -40,10 +40,12 @@ def kmeans(X):
     plt.title('The Elbow Method using Distortion')
     plt.savefig("Figures/elbow1.jpg")
 
-    kmeans_ = KMeans(n_clusters=2, random_state=0).fit(X)
+def get_centers(X,optimal_k)
+    kmeans_ = KMeans(n_clusters=optimal_k, random_state=0).fit(X)
     print(kmeans_.labels_)
     print(kmeans_.cluster_centers_)
     return kmeans_.cluster_centers_
 
 if __name__ == '__main__':
-    output = kmeans(X)
+    kmeans(X)
+    output = get_centers(X,2)
