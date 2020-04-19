@@ -13,7 +13,7 @@ import logging
 from data import data, for_fa
 from pathlib import Path
 import wandb 
-
+import math 
 #from clustering import KMeans
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,5 +36,7 @@ if __name__=='__main__':
     logging.info('Loading data!')
     X = for_fa(data('offline_workload'))
     score = compute_score(X, args)
+    if score == -1 * math.inf:
+            score = -1e304
     wandb.log({'score': score})
     logging.info(f'{args.ncomponents} : {score}')
