@@ -4,6 +4,7 @@ from scipy.spatial.distance import cdist
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.datasets import load_diabetes
+from sklearn.metrics import pairwise_distances_argmin_min
 from tqdm import tqdm
 X,_ = load_diabetes(return_X_y=True)
 print(X.shape)
@@ -44,8 +45,11 @@ def get_centers(X,optimal_k):
     kmeans_ = KMeans(n_clusters=optimal_k, random_state=0).fit(X)
     print(kmeans_.labels_)
     print(kmeans_.cluster_centers_)
-    return kmeans_.cluster_centers_
+    idx, dist = pairwise_distances_argmin_min(kmeans_.cluster_centers_, X)
+    #return kmeans_.cluster_centers_
+    return idx
 
 if __name__ == '__main__':
     kmeans(X)
-    output = get_centers(X,2)
+    output = get_centers(X,3)
+    print(output)
