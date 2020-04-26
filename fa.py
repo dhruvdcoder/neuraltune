@@ -12,7 +12,7 @@ import argparse
 import logging 
 from data import data, for_fa
 from pathlib import Path
-#from clustering import KMeans
+from clustering import kmeans, get_centers
 logging.basicConfig(format="%(asctime)s - %(levelname)s - %(name)s - %(message)s", level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -54,12 +54,16 @@ if __name__=='__main__':
     parser.add_argument('--cache', type=Path, default='fa_cache',
             help='Filepath to save transformed X')
 
+            
 
     args = parser.parse_args()
     #X,_ = load_digits(return_X_y=True)
     logging.info('Loading data!')
     X = for_fa(data('offline_workload'))
+    logging.info(f'Shape of data {X.shape}')
     X_transformed = fa(X, folds=args.folds, max_components=args.max_comp, step_size=args.step, chunk_size=args.chunk, pool_workers=args.workers, cv_jobs=args.cv_jobs)
     np.save(args.output.with_suffix('.npy'), X_transformed)
     logger.info('Saved x_transformed to {}'.format(args.output.with_suffix('.npy')))
-    
+    logger.info(f'After Factor Analysis, X is of the dimensions {X_transformed.shape}')
+
+
