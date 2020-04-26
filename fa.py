@@ -1,4 +1,3 @@
-from sklearn.decomposition import FactorAnalysis
 from sklearn.model_selection import cross_val_score
 import numpy as np
 from sklearn.datasets import load_digits
@@ -12,7 +11,9 @@ import argparse
 import logging
 from data import Data
 from pathlib import Path
+from server.analysis.factor_analysis import FactorAnalysis
 from clustering import kmeans, get_centers
+from server.analysis.cluster import KMeansClusters, create_kselection_model
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
     level=logging.INFO)
@@ -102,7 +103,8 @@ if __name__ == '__main__':
         help='Filepath to save transformed X')
     parser.add_argument(
         '--input_data', default=Path('.data/offline_workload.CSV'), type=Path)
-
+    parser.add_argument('--kmeans_runs', default=2, type=int)
+    np.random.seed(123)
     args = parser.parse_args()
     #X,_ = load_digits(return_X_y=True)
     logging.info('Loading data!')
@@ -129,3 +131,24 @@ if __name__ == '__main__':
     cache_file = args.cache.with_suffix('.npy')
     logger.info(f"Saving preprocessed data in {cache_file}")
     np.save(cache_file, {"metrics": data.X, "labels": data.metric_names})
+
+    fa_model = FactorAnalysis()
+    fa_model.fit(data.X, data.metric_names, n_components=8)
+
+    components = fa_model.components_.T.copy()
+
+    kmeans_models = KMeansClusters()
+    kmeans_models.fit(
+        components,
+        min_cluster=1,
+        max_cluster=10,
+        sample_labels=data.metric_names,
+        estimator_params=dict(n_init=args.kmeans_runs))
+
+    gap_k = create_kselection_model("gap-statistic")
+    gap_k.fit(components, kmeans_models.cluster_map_)
+    logger.info(f"Optimal clusters is {gap_k.optimal_num_clusters_}")
+    pruned_metrics = kmeans_models.cluster_map_[
+        gap_k.optimal_num_clusters_].get_closest_samples()
+    logger.info(f"pruned metrics: {pruned_metrics}")
+    np.save("pruned_metrics.npy", pruned_metrics)
