@@ -117,9 +117,7 @@ class Workload:
 
     def map_target_workload(self, id, target_x, target_y) -> tuple():
         #logger.info(f'Workload mapping called for {id}')
-        #print('Target', target_y)
         #target_y = self.y_binner.transform(target_y) #Needs to be binned for euclidian distance
-        #print('Binned target', target_y)
         scores = []
         for key in self.unique_workloads_train:
             #logger.info(f'Mapper target_x {target_x.shape}')
@@ -128,14 +126,10 @@ class Workload:
                 gpr = self.models[key][metric]
                 outputs = gpr.predict(target_x)
                 y_pred = outputs.reshape(-1,1) if not y_pred.shape[0] else np.concatenate([y_pred, outputs.reshape(-1,1)],axis=1)     
-            #logger.info(f'Mapper target_y {target_y.shape}, y_pred {y_pred.shape}')
-            #print('y_pred', y_pred)
             #binned_pred = self.y_binner.transform(y_pred)
             binned_pred = y_pred
-            #print('Binned', binned_pred)
             dists = np.sqrt(np.sum(np.square(
                     np.subtract(binned_pred, target_y)), axis=1))
-            #print(dists)
             scores.append(np.mean(dists))
         scores = np.array(scores)
         self.distances.append(scores)

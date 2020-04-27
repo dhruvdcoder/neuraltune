@@ -24,13 +24,15 @@ def get_parser():
     parser.add_argument('--noise', type=float, default=0.4)
     parser.add_argument('--topk', type=int, default=4)
     parser.add_argument('--threshold', type=float, default=0)
+    parser.add_argument('--no_wandb', action='store_true')
     return parser
 
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
     np.random.seed(123)
-    #wandb.init()
+    if not args.no_wandb:
+        wandb.init()
 
     data = Data()
     data.read(args.input_data)
@@ -62,4 +64,5 @@ if __name__ == '__main__':
     w.read_dev_set(args.dev_data)
     mse = w.compute_score()
     logger.info(f'MSE: {mse}')
-    #wandb.log({'mse': mse})
+    if not args.no_wandb:
+        wandb.log({'mse': mse})
