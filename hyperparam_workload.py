@@ -22,7 +22,8 @@ def get_parser():
     parser.add_argument('--length_scale', type=float, default=1)
     parser.add_argument('--output_variation', type=float, default=1)
     parser.add_argument('--noise', type=float, default=0.4)
-    parser.add_argument('--topk', type=int, default=2)
+    parser.add_argument('--topk', type=int, default=4)
+    parser.add_argument('--threshold', type=float, default=0)
     return parser
 
 if __name__ == '__main__':
@@ -30,6 +31,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     np.random.seed(123)
     #wandb.init()
+
     data = Data()
     data.read(args.input_data)
     data.preprocess()
@@ -48,10 +50,12 @@ if __name__ == '__main__':
     logger.info(f"Optimal clusters is {gap_k.optimal_num_clusters_}")
     pruned_metrics = list(kmeans_models.cluster_map_[
         gap_k.optimal_num_clusters_].get_closest_samples())+['latency']
+
+    #pruned_metrics = ['executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi', 'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg', 'worker_2.Memory_MB.cached', 'mimic_cpu_util', 'worker_1.Paging_and_Virtual_Memory.pgpgout', 'executor.resultSerializationTime.avg', 'driver.LiveListenerBus.numEventsPosted.avg_increase', 'executor.jvm.non-heap.committed.avg_period', 'latency']
     logger.info(f"pruned metrics: {pruned_metrics}")
     w = Workload(length_scale = args.length_scale, output_variation=args.output_variation,
                  pruned_metrics = pruned_metrics, noise=args.noise, n_jobs=args.workers,
-                 topk=args.topk)
+                 topk=args.topk, threshold=args.threshold)
     w.read(args.input_data)
     w.preprocess()
     w.train_models()

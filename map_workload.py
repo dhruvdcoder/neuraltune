@@ -37,6 +37,7 @@ class Workload:
         self.n_jobs = 1
         self.noise = None
         self.topk=1
+        self.threshold = 0
         for param, val in list(parameters.items()):
             setattr(self, param, val)
         self.X_scaler = self.X_scaler if self.X_scaler else StandardScaler(copy=False)
@@ -48,6 +49,7 @@ class Workload:
         self.unique_workloads_dev: List[str] = None
         self.metric_names_dev: List[str] = None
         self.rbf = None
+        self.distances=[]
 
         
     def get_params(self, deep=True) -> dict:
@@ -115,7 +117,9 @@ class Workload:
 
     def map_target_workload(self, id, target_x, target_y) -> tuple():
         #logger.info(f'Workload mapping called for {id}')
-        target_y = self.y_binner.transform(target_y) #Needs to be binned for euclidian distance
+        #print('Target', target_y)
+        #target_y = self.y_binner.transform(target_y) #Needs to be binned for euclidian distance
+        #print('Binned target', target_y)
         scores = []
         for key in self.unique_workloads_train:
             #logger.info(f'Mapper target_x {target_x.shape}')
@@ -125,12 +129,22 @@ class Workload:
                 outputs = gpr.predict(target_x)
                 y_pred = outputs.reshape(-1,1) if not y_pred.shape[0] else np.concatenate([y_pred, outputs.reshape(-1,1)],axis=1)     
             #logger.info(f'Mapper target_y {target_y.shape}, y_pred {y_pred.shape}')
-            binned_pred = self.y_binner.transform(y_pred)
+            #print('y_pred', y_pred)
+            #binned_pred = self.y_binner.transform(y_pred)
+            binned_pred = y_pred
+            #print('Binned', binned_pred)
             dists = np.sqrt(np.sum(np.square(
                     np.subtract(binned_pred, target_y)), axis=1))
+            #print(dists)
             scores.append(np.mean(dists))
         scores = np.array(scores)
-        min_idx = np.argpartition(scores, self.topk)[:self.topk]
+        self.distances.append(scores)
+        min_idx = []
+        if self.threshold:
+            min_idx = np.where(scores<self.threshold)
+        if len(min_idx)==0:
+            min_idx = np.argpartition(scores, self.topk)[:self.topk]
+        #logger.info(f'Min scores: {scores[min_idx]}')
         workload_id = self.unique_workloads_train[min_idx]
 
         #Now we know which workload from the train set is the nearest neighbor. Need to augment its x and y walues to test.
@@ -160,6 +174,7 @@ class Workload:
         #Concatenate target worload and map workload output. Retain original latency values if knob config repeats.
         train_x = np.concatenate([target_x, x], axis=0)
         train_y = np.concatenate([target_y[:,latency_idx].reshape(-1,1), pred_y[:, latency_idx].reshape(-1,1)], axis=0)
+        logger.info(f'Shapes for training latency prediction{id}: X {train_x.shape}, Y {train_y.shape}')
 
         temp_data = np.concatenate([train_x, train_y], axis=1)
         #breakpoint()
@@ -206,6 +221,9 @@ class Workload:
         plt.figure(2)
         plt.plot(range(len(y_arr)), y_arr)
         plt.savefig('latency.png')
+        plt.figure(3)
+        plt.hist(np.array(self.distances).reshape(-1),np.arange(0,1,0.05))
+        plt.savefig('histogram.png')
         return mse
 
 
