@@ -36,6 +36,7 @@ class Workload:
         self.unique_workloads_train: List[str] = None
         self.n_jobs = 1
         self.noise = None
+        self.topk=1
         for param, val in list(parameters.items()):
             setattr(self, param, val)
         self.X_scaler = self.X_scaler if self.X_scaler else StandardScaler(copy=False)
@@ -127,14 +128,13 @@ class Workload:
             binned_pred = self.y_binner.transform(y_pred)
             dists = np.sqrt(np.sum(np.square(
                     np.subtract(binned_pred, target_y)), axis=1))
-            score = np.mean(dists)
             scores.append(np.mean(dists))
         scores = np.array(scores)
-        min_idx = np.argmin(scores)
+        min_idx = np.argpartition(scores, self.topk)[:self.topk]
         workload_id = self.unique_workloads_train[min_idx]
 
         #Now we know which workload from the train set is the nearest neighbor. Need to augment its x and y walues to test.
-        idxs = np.where(self.row_labels==workload_id)                
+        idxs = np.isin(self.row_labels, workload_id)                
         workload_x = self.X_train[idxs]
         workload_y = self.y_train[idxs]
         #logger.info(f'Workload {id} mapped to {workload_id}')
