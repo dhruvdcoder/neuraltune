@@ -21,13 +21,14 @@ def get_parser():
     parser = fa_parser()
     parser.add_argument('--length_scale', type=float, default=1)
     parser.add_argument('--output_variation', type=float, default=1)
-    parser.add_argument('--noise', type=float, default=0.1)
+    parser.add_argument('--noise', type=float, default=0.4)
+    parser.add_argument('--topk', type=int, default=2)
     return parser
 
 if __name__ == '__main__':
     parser = get_parser()
     args = parser.parse_args()
-    np.random.seed(112)
+    np.random.seed(123)
     #wandb.init()
     data = Data()
     data.read(args.input_data)
@@ -48,7 +49,9 @@ if __name__ == '__main__':
     pruned_metrics = list(kmeans_models.cluster_map_[
         gap_k.optimal_num_clusters_].get_closest_samples())+['latency']
     logger.info(f"pruned metrics: {pruned_metrics}")
-    w = Workload(length_scale = args.length_scale, output_variation=args.output_variation, pruned_metrics = pruned_metrics, noise=args.noise, n_jobs=args.workers)
+    w = Workload(length_scale = args.length_scale, output_variation=args.output_variation,
+                 pruned_metrics = pruned_metrics, noise=args.noise, n_jobs=args.workers,
+                 topk=args.topk)
     w.read(args.input_data)
     w.preprocess()
     w.train_models()
