@@ -153,7 +153,7 @@ class Workload:
         pruned_metric_idxs = [i for i,name in enumerate(self.metric_names_dev) if name in list(self.pruned_metrics)]
         target_y = target_y[:, pruned_metric_idxs]
         metric_names = np.array(self.metric_names_dev)[pruned_metric_idxs]
-        latency_idx  = np.where(metric_names=='latency')
+        latency_idx  = np.where(metric_names==LATENCY)
         #scale x and y
         target_x = self.X_scaler.transform(target_x)
         target_y = self.y_scaler.transform(target_y)
@@ -214,7 +214,7 @@ class Workload:
         plt.savefig('scatter.png')
         plt.figure(2)
         plt.plot(range(len(y_arr)), y_arr)
-        plt.savefig('latency.png')
+        plt.savefig(f'{LATENCY}.png')
         plt.figure(3)
         plt.hist(np.array(self.distances).reshape(-1),np.arange(0,1,0.05))
         plt.savefig('histogram.png')

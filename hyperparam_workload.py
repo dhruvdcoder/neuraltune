@@ -50,8 +50,9 @@ if __name__ == '__main__':
     gap_k = create_kselection_model("gap-statistic")
     gap_k.fit(components, kmeans_models.cluster_map_)
     logger.info(f"Optimal clusters is {gap_k.optimal_num_clusters_}")
-    pruned_metrics = list(kmeans_models.cluster_map_[
-        gap_k.optimal_num_clusters_].get_closest_samples())+['latency']
+    tempList = list(kmeans_models.cluster_map_[
+        gap_k.optimal_num_clusters_].get_closest_samples())
+    pruned_metrics = tempList + ['latency'] if 'latency' not in tempList else tempList
 
     #pruned_metrics = ['executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi', 'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg', 'worker_2.Memory_MB.cached', 'mimic_cpu_util', 'worker_1.Paging_and_Virtual_Memory.pgpgout', 'executor.resultSerializationTime.avg', 'driver.LiveListenerBus.numEventsPosted.avg_increase', 'executor.jvm.non-heap.committed.avg_period', 'latency']
     logger.info(f"pruned metrics: {pruned_metrics}")
