@@ -29,9 +29,11 @@ class SimpleNN(Model):
                          a: torch.Tensor,
                          b: torch.Tensor,
                          y: torch.Tensor = None) -> None:
-        a_batch, a_dims = a.shape  # (num_samples*batch, knobs+metrics)
+        batch, num_samples, num_features = a.shape
+        assert num_samples == self.num_samples
         b_batch, b_dims = b.shape  # (batch, knobs)
-        assert self.num_samples * b_batch == a_batch
+
+        assert b_batch == batch
 
         if y is not None:
             assert y.shape[0] == b_batch
@@ -41,17 +43,19 @@ class SimpleNN(Model):
                 b: torch.Tensor,
                 y: Optional[torch.Tensor] = None) -> Dict:
         # do some checks
+        batch, num_samples, num_features = a.shape
         self.check_dimensions(a, b, y)
+        a = a.view(batch * num_samples, num_features)
         batch = b.shape[0]
         # apply ff
-        hidden_a = self.ff(a)  # (num_samples*batch, hidden_dim)
+        hidden_a = self.ff_rep(a)  # (num_samples*batch, hidden_dim)
         hidden_a_grouped = hidden_a.view(
             (batch, self.num_samples, -1))  # (batch, num_samples, hidden_dim)
         hidden_a_mean = torch.mean(hidden_a_grouped, -2)  # (batch, hidden_dim)
         for_regression = torch.cat((hidden_a_mean, b),
                                    -1)  # (batch, hidden_dim + knobs)
         final_states = self.ff_reg(for_regression)  # (batch, hidden_dim)
-        pred = self.output(final_states)
+        pred = self.output(final_states).view(-1)
         output_dict: Dict[str, Optional[torch.Tensor]] = {'pred': pred}
 
         if y is not None:

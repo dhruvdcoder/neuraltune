@@ -42,6 +42,7 @@ class NeuralData:
         self.index = 0
         self.knob_scaler = StandardScaler(copy=False)
         self.metrics_scaler = StandardScaler(copy=False)
+
         for param, val in list(parameters.items()):
             setattr(self, param, val)
         self.latency_idx = None
@@ -60,16 +61,18 @@ class NeuralData:
             i for i, name in enumerate(self.train_labels) if name == LATENCY
         ][0]
         self.train_data = df.to_numpy()
-        self.train_data[:,1:] = self.train_data[:, 1:].astype(float)
+        self.train_data[:, 1:] = self.train_data[:, 1:].astype(float)
         logger.info(f"Finished reading train data")
-
 
     def read_data(self, folder_path: str) -> None:
         self.read_data_train(folder_path)
+
         if self.type_flag != 'train':
-            df = pd.read_csv(os.path.join(folder_path, f'{self.type_flag}.csv'))
+            df = pd.read_csv(
+                os.path.join(folder_path, f'{self.type_flag}.csv'))
             pruned_idxs = [
                 i for i, name in enumerate(df.columns)
+
                 if name in self.pruned_metrics
             ]
             pruned_idxs = list(range(0, METRICS_START)) + pruned_idxs
@@ -77,7 +80,7 @@ class NeuralData:
             setattr(self, f'{self.type_flag}_labels', df.columns)
             setattr(self, f'{self.type_flag}_data', df.to_numpy())
         data = getattr(self, f'{self.type_flag}_data')
-        data[:,1:] = data[:,1:].astype(float)
+        data[:, 1:] = data[:, 1:].astype(float)
         self.shuffled_idxs = np.arange(data.shape[0])
         np.random.default_rng().shuffle(self.shuffled_idxs)
         self.create_meta_objects()
@@ -89,14 +92,19 @@ class NeuralData:
         self.knob_scaler.fit(self.train_data[:, 1:METRICS_START])
         self.metrics_scaler.fit(self.train_data[:, METRICS_START:])
         data = getattr(self, f'{self.type_flag}_data')
-        data[:, 1:METRICS_START] = self.knob_scaler.transform(data[:, 1:METRICS_START])
-        if self.type_flag !='test':
-            data[:, METRICS_START:] = self.metrics_scaler.transform(data[:, METRICS_START:])
+        data[:, 1:METRICS_START] = self.knob_scaler.transform(
+            data[:, 1:METRICS_START])
+
+        if self.type_flag != 'test':
+            data[:, METRICS_START:] = self.metrics_scaler.transform(
+                data[:, METRICS_START:])
         setattr(self, f'{self.type_flag}_data', data)
+
         return
 
     def create_meta_objects(self) -> None:
         data = getattr(self, f'{self.type_flag}_data')
+
         for id, entry in enumerate(data):
             wid = entry[0]
             l = self.map_wid_idxs.get(wid, [])
@@ -105,19 +113,20 @@ class NeuralData:
 
     def __iter__(self):
         self.index = 0
+
         return self
 
     def __next__(self):
         results = []
         data = getattr(self, f'{self.type_flag}_data')
+
         if self.index >= data.shape[0]:
             raise StopIteration
+
         for idx in range(self.index, self.index + self.batch_size):
             if idx < data.shape[0]:
-                b = np.concatenate([
-                    data[idx][1:self.latency_idx],
-                    data[idx][self.latency_idx + 1:]
-                ])
+                b = data[idx][1:METRICS_START]
+
                 y = data[idx][self.latency_idx]
                 wid = self.map_idx_wid[idx]
 
