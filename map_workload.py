@@ -228,25 +228,26 @@ class Workload:
         self.unique_workloads_dev = np.unique(self.row_labels_dev)
         self.y_dev = (df[df.columns[METRICS_START:]]).values
         self.metric_names_dev = df.columns[METRICS_START:]
-        logger.info(
-            f'Shapes after reading: X_dev {self.X_dev.shape},y_dev {self.y_dev.shape},unique_workloads_dev {self.unique_workloads_dev.shape}'
-        )
-
         return
 
     def compute_score(self) -> float:
         logger.info('Computes score called.')
-        mse = 0
         y_arr, ypred_arr = [], []
 
         for entry in tqdm(list(self.unique_workloads_dev)):
             idxs = np.where(self.row_labels_dev == entry)
             x_train = self.X_dev[idxs]
             y_train = self.y_dev[idxs]
-            _, y_pred, y = self.predict_target(entry, x_train, y_train)
-            y_arr.append(y.reshape(-1)[0])
-            ypred_arr.append(y_pred.reshape(-1)[0])
-            mse += (y_arr[-1] - ypred_arr[-1])**2
+            for i in range(x_train.shape[0]):
+                _, y_pred, y = self.predict_target(entry, x_train, y_train)
+                y_arr.append(y.reshape(-1)[0])
+                ypred_arr.append(y_pred.reshape(-1)[0])
+                x_train, y_train = np.roll(x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
+        breakpoint()
+        y_arr = np.array(y_arr)
+        y_pred = np.array(ypred_arr)
+        logger.info(f'Shapes: y_pred {y_pred.shape}, y_arr {y_arr.shape}')
+        mse = np.mean((y_pred-y_arr)**2)
         logger.info(f'MSE: {mse}')
         plt.figure(1)
         plt.scatter(y_arr, ypred_arr)
