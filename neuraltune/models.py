@@ -2,7 +2,7 @@ from typing import Optional, List, Any, Dict
 import torch
 from allennlp.models import Model
 from allennlp.modules.feedforward import FeedForward
-from allennlp.nn.activations import tanh, Activation
+from allennlp.nn.activations import Activation
 import logging
 logger = logging.getLogger(__name__)
 
@@ -14,25 +14,15 @@ class NeuralTune(Model):
         super().__init__(*args, **kwargs)
 
 
-@NeuralTune.register('simple-nn')
-class SimpleNN(NeuralTune):
-    def __init__(self,
-                 num_samples: int = 5,
-                 representation_network: FeedForward = FeedForward(
-                     input_dim=10,
-                     hidden_size=10,
-                     num_layers=1,
-                     activations=tanh),
-                 regression_network: FeedForward = FeedForward(
-                     input_dim=10,
-                     hidden_size=10,
-                     num_layers=1,
-                     activations=tanh)) -> None:
+@Model.register('simple-nn')
+class SimpleNN(Model):
+    def __init__(self, num_samples: int, representation_network: FeedForward,
+                 regression_network: FeedForward) -> None:
         super().__init__(vocab=None)
         self.num_samples = num_samples
         self.ff_rep = representation_network
         self.ff_reg = regression_network
-        self.output = torch.nn.Linear(self.tt_reg.get_output_dim(), 1)
+        self.output = torch.nn.Linear(self.ff_reg.get_output_dim(), 1)
         self.loss_f = torch.nn.MSELoss()
 
     def check_dimensions(self,
@@ -58,8 +48,8 @@ class SimpleNN(NeuralTune):
         hidden_a_grouped = hidden_a.view(
             (batch, self.num_samples, -1))  # (batch, num_samples, hidden_dim)
         hidden_a_mean = torch.mean(hidden_a_grouped, -2)  # (batch, hidden_dim)
-        # (batch, hidden_dim + knobs)
-        for_regression = torch.cat((hidden_a_mean, b), -1)
+        for_regression = torch.cat((hidden_a_mean, b),
+                                   -1)  # (batch, hidden_dim + knobs)
         final_states = self.ff_reg(for_regression)  # (batch, hidden_dim)
         pred = self.output(final_states)
         output_dict: Dict[str, Optional[torch.Tensor]] = {'pred': pred}
