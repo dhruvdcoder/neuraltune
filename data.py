@@ -33,7 +33,8 @@ class Data:
     def read(self, path: Path) -> None:
         df = pd.read_csv(path)
         self.all_data = (df[df.columns[METRICS_START:]]).values
-        self.all_metric_names = df.columns
+        self.all_metric_names = df.columns[METRICS_START:]
+        
 
     def preprocess(self) -> None:
         logger.info(f"Data shape before preprocessing {self.all_data.shape}")

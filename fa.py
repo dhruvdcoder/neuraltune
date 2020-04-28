@@ -12,7 +12,6 @@ import logging
 from data import Data
 from pathlib import Path
 from server.analysis.factor_analysis import FactorAnalysis
-from clustering import kmeans, get_centers
 from server.analysis.cluster import KMeansClusters, create_kselection_model
 logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -68,14 +67,18 @@ def fa(x,
 
     return X_transformed
 
-
-if __name__ == '__main__':
+def get_parser():
     parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--n_components',
+        type=int,
+        default=1000,
+        help='n components to be considered for FA')
     parser.add_argument(
         '--max_comp',
         type=int,
         default=1000,
-        help='Max components to be considered for FA')
+        help='max components to be considered for FA')
     parser.add_argument(
         '--step', type=int, default=1, help='Step size for grid')
     parser.add_argument(
@@ -103,7 +106,13 @@ if __name__ == '__main__':
         help='Filepath to save transformed X')
     parser.add_argument(
         '--input_data', default=Path('.data/offline_workload.CSV'), type=Path)
+    parser.add_argument(
+        '--dev_data', default=Path('.data/online_workload_B.CSV'), type=Path)
     parser.add_argument('--kmeans_runs', default=2, type=int)
+    return parser
+
+if __name__ == '__main__':
+    parser = get_parser()
     np.random.seed(123)
     args = parser.parse_args()
     #X,_ = load_digits(return_X_y=True)
@@ -133,7 +142,7 @@ if __name__ == '__main__':
     np.save(cache_file, {"metrics": data.X, "labels": data.metric_names})
 
     fa_model = FactorAnalysis()
-    fa_model.fit(data.X, data.metric_names, n_components=8)
+    fa_model.fit(data.X, data.metric_names, n_components=25)
 
     components = fa_model.components_.T.copy()
 
