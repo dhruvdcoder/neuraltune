@@ -1,5 +1,5 @@
 import pandas as pd
-from pathlib import Path
+import os
 from typing import List, Any
 import numpy as np
 import logging
@@ -29,62 +29,75 @@ class NeuralData:
             'driver.LiveListenerBus.numEventsPosted.avg_increase',
             'executor.jvm.non-heap.committed.avg_period', 'latency'
         ]
-
+        self.type_flag = 'train'
         self.train_data = None
         self.train_labels = None
+        self.dev_data = None
+        self.dev_labels = None
+        self.test_data = None
+        self.test_labels = None
         self.map_wid_idxs = dict()
         self.map_idx_wid = dict()
         self.shuffled_idxs = None
         self.index = 0
-        self.train_flag = True
-        self.scaler = StandardScaler(copy=False
-                                    )
-
+        self.knob_scaler = StandardScaler(copy=False)
+        self.metrics_scaler = StandardScaler(copy=False)
         for param, val in list(parameters.items()):
             setattr(self, param, val)
         self.latency_idx = None
 
-    def read_data(self, train_path: str) -> None:
-        df = pd.read_csv(train_path)
+    def read_data_train(self, folder_path: str) -> None:
+        df = pd.read_csv(os.path.join(folder_path, 'train.csv'))
         pruned_idxs = [
             i for i, name in enumerate(df.columns)
 
             if name in self.pruned_metrics
         ]
         pruned_idxs = list(range(0, METRICS_START)) + pruned_idxs
-
         df = df[df.columns[pruned_idxs]]
         self.train_labels = df.columns
         self.latency_idx = [
             i for i, name in enumerate(self.train_labels) if name == LATENCY
         ][0]
         self.train_data = df.to_numpy()
-        self.shuffled_idxs = np.arange(self.train_data.shape[0])
+        self.train_data[:,1:] = self.train_data[:, 1:].astype(float)
+        logger.info(f"Finished reading train data")
+
+
+    def read_data(self, folder_path: str) -> None:
+        self.read_data_train(folder_path)
+        if self.type_flag != 'train':
+            df = pd.read_csv(os.path.join(folder_path, f'{self.type_flag}.csv'))
+            pruned_idxs = [
+                i for i, name in enumerate(df.columns)
+                if name in self.pruned_metrics
+            ]
+            pruned_idxs = list(range(0, METRICS_START)) + pruned_idxs
+            df = df[df.columns[pruned_idxs]]
+            setattr(self, f'{self.type_flag}_labels', df.columns)
+            setattr(self, f'{self.type_flag}_data', df.to_numpy())
+        data = getattr(self, f'{self.type_flag}_data')
+        data[:,1:] = data[:,1:].astype(float)
+        self.shuffled_idxs = np.arange(data.shape[0])
         np.random.default_rng().shuffle(self.shuffled_idxs)
-        logger.info(f"Finished reading data")
         self.create_meta_objects()
         logger.info(f"Finished creating meta objects")
+        self.normalize()
+        logger.info(f"Finished data reading and normalisation")
 
-     def read_dev_data(self, dev_path: str) -> None:
-        df = pd.read_csv(dev_path)
-        # prune
-        pruned_idxs = [
-            i for i, name in enumerate(df.columns)
-
-            if name in self.pruned_metrics
-        ]
-        pruned_idxs = list(range(0, METRICS_START)) + pruned_idxs
-
-        df = df[df.columns[pruned_idxs]]
-        self.dev_labels = df.columns
-        self.dev_latency_idx = [
-            i for i, name in enumerate(self.dev_labels) if name == LATENCY
-        ][0]
-        self.dev_data = df.to_numpy()
-        logger.info(f"Finished reading data")
+    def normalize(self) -> None:
+        self.knob_scaler.fit(self.train_data[:, 1:METRICS_START])
+        self.metrics_scaler.fit(self.train_data[:, METRICS_START:])
+        data = getattr(self, f'{self.type_flag}_data')
+        data[:, 1:METRICS_START] = self.knob_scaler.transform(data[:, 1:METRICS_START])
+        if self.type_flag !='test':
+            data[:, METRICS_START:] = self.metrics_scaler.transform(data[:, METRICS_START:])
+        setattr(self, f'{self.type_flag}_data', data)
+        return
 
     def create_meta_objects(self) -> None:
-        for id, entry in enumerate(self.train_data):
+        data = getattr(self, f'{self.type_flag}_data')
+        for id, entry in enumerate(data):
             wid = entry[0]
             l = self.map_wid_idxs.get(wid, [])
             self.map_wid_idxs[wid] = l + [id]
@@ -92,31 +105,29 @@ class NeuralData:
 
     def __iter__(self):
         self.index = 0
-
         return self
 
     def __next__(self):
         results = []
-
-        if self.index >= self.train_data.shape[0]:
+        data = getattr(self, f'{self.type_flag}_data')
+        if self.index >= data.shape[0]:
             raise StopIteration
-
         for idx in range(self.index, self.index + self.batch_size):
-            if idx < self.train_data.shape[0]:
+            if idx < data.shape[0]:
                 b = np.concatenate([
-                    self.train_data[idx][1:self.latency_idx],
-                    self.train_data[idx][self.latency_idx + 1:]
+                    data[idx][1:self.latency_idx],
+                    data[idx][self.latency_idx + 1:]
                 ])
-                y = self.train_data[idx][self.latency_idx]
+                y = data[idx][self.latency_idx]
                 wid = self.map_idx_wid[idx]
 
-                if self.train_flag:
+                if self.type_flag == 'train':
                     a_idxs = self.map_wid_idxs[wid]
                 else:
                     a_idxs = self.map_wid_idxs[wid].copy()
                     a_idxs.remove(idx)
                 a_idxs = np.random.choice(a_idxs, self.set_size, replace=False)
-                a = self.train_data[a_idxs][:, 1:]
+                a = data[a_idxs][:, 1:]
                 results.append((a, b, y))
                 self.index += 1
             else:
