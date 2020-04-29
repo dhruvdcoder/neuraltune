@@ -243,12 +243,13 @@ class Workload:
                 y_arr.append(y.reshape(-1)[0])
                 ypred_arr.append(y_pred.reshape(-1)[0])
                 x_train, y_train = np.roll(x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
-        breakpoint()
+        #breakpoint()
         y_arr = np.array(y_arr)
         y_pred = np.array(ypred_arr)
         logger.info(f'Shapes: y_pred {y_pred.shape}, y_arr {y_arr.shape}')
         mse = np.mean((y_pred-y_arr)**2)
         logger.info(f'MSE: {mse}')
+        """
         plt.figure(1)
         plt.scatter(y_arr, ypred_arr)
         plt.xlabel('y')
@@ -260,5 +261,5 @@ class Workload:
         plt.figure(3)
         plt.hist(np.array(self.distances).reshape(-1), np.arange(0, 1, 0.05))
         plt.savefig('histogram.png')
-
+        """
         return mse
