@@ -3,7 +3,6 @@ import numpy as np
 from sklearn.datasets import load_digits
 import pdb
 from sklearn.model_selection import GridSearchCV
-from joblib import Parallel, delayed
 from functools import partial
 import multiprocessing
 import tqdm
@@ -72,7 +71,7 @@ def get_parser():
     parser.add_argument(
         '--n_components',
         type=int,
-        default=1000,
+        default=10,
         help='n components to be considered for FA')
     parser.add_argument(
         '--max_comp',

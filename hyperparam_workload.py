@@ -56,9 +56,9 @@ if __name__ == '__main__':
     #pruned_metrics = ['executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi', 'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg', 'worker_2.Memory_MB.cached', 'mimic_cpu_util', 'worker_1.Paging_and_Virtual_Memory.pgpgout', 'executor.resultSerializationTime.avg', 'driver.LiveListenerBus.numEventsPosted.avg_increase', 'executor.jvm.non-heap.committed.avg_period', 'latency']
     logger.info(f"pruned metrics: {pruned_metrics}")
     w = Workload(length_scale = args.length_scale, output_variation=args.output_variation,
-                 pruned_metrics = pruned_metrics, noise=args.noise, n_jobs=args.workers,
-                 topk=args.topk, threshold=args.threshold, chunk_size=args.chunk_size,
-                 pool_workers=args.pool_workers)
+                 pruned_metrics = pruned_metrics, noise=args.noise, 
+                 topk=args.topk, threshold=args.threshold, chunk_size=args.chunk,
+                 pool_workers=args.workers)
     w.read(args.input_data)
     w.preprocess()
     w.train_models()
