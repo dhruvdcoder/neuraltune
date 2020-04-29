@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 def get_parser():
     parser = fa_parser()
-    parser.add_argument('--length_scale', type=float, default=1)
-    parser.add_argument('--output_variation', type=float, default=1)
-    parser.add_argument('--noise', type=float, default=0.4)
-    parser.add_argument('--topk', type=int, default=4)
+    parser.add_argument('--length_scale', type=float, default=0.73)
+    parser.add_argument('--output_variation', type=float, default=1.2)
+    parser.add_argument('--noise', type=float, default=0.49)
+    parser.add_argument('--topk', type=int, default=5)
     parser.add_argument('--threshold', type=float, default=0)
     parser.add_argument('--no_wandb', action='store_true')
     return parser
@@ -57,7 +57,8 @@ if __name__ == '__main__':
     logger.info(f"pruned metrics: {pruned_metrics}")
     w = Workload(length_scale = args.length_scale, output_variation=args.output_variation,
                  pruned_metrics = pruned_metrics, noise=args.noise, n_jobs=args.workers,
-                 topk=args.topk, threshold=args.threshold)
+                 topk=args.topk, threshold=args.threshold, chunk_size=args.chunk_size,
+                 pool_workers=args.pool_workers)
     w.read(args.input_data)
     w.preprocess()
     w.train_models()

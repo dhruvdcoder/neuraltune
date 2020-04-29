@@ -8,7 +8,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.gaussian_process import GaussianProcessRegressor
 from sklearn.gaussian_process.kernels import ConstantKernel, RBF
 from util import Util
-from tqdm import tqdm
+import tqdm
+import multiprocessing
 import matplotlib.pyplot as plt
 logger = logging.getLogger(__name__)
 
@@ -37,7 +38,8 @@ class Workload:
         self.noise = None
         self.topk = 1
         self.threshold = 0
-
+        self.pool_workers = 5
+        self.chunk_size = 2
         for param, val in list(parameters.items()):
             setattr(self, param, val)
         self.X_scaler = self.X_scaler if self.X_scaler else StandardScaler(
@@ -53,6 +55,7 @@ class Workload:
         self.metric_names_dev: List[str] = None
         self.rbf = None
         self.distances = []
+ 
 
     def get_params(self, deep=True) -> dict:
         return {
@@ -118,7 +121,7 @@ class Workload:
         self.rbf = ConstantKernel(
             self.output_variation) * RBF(length_scale=self.length_scale)
 
-        for entry in tqdm(self.unique_workloads_train):
+        for entry in tqdm.tqdm(self.unique_workloads_train):
             idxs = np.where(self.row_labels == entry)
             self.models[entry] = dict()
             x_train = self.X_train[idxs]
@@ -201,7 +204,7 @@ class Workload:
             pred_y[:, latency_idx].reshape(-1, 1)
         ],
             axis=0)
-        logger.info(
+        logger.debug(
             f'Shapes for training latency prediction{id}: X {train_x.shape}, Y {train_y.shape}'
         )
 
@@ -228,27 +231,30 @@ class Workload:
         self.unique_workloads_dev = np.unique(self.row_labels_dev)
         self.y_dev = (df[df.columns[METRICS_START:]]).values
         self.metric_names_dev = df.columns[METRICS_START:]
-        return
+
+
+    def predict_target_helper(self, workload_id: str) -> None:
+        idxs = np.where(self.row_labels_dev == workload_id)
+        x_train = self.X_dev[idxs]
+        y_train = self.y_dev[idxs]
+        ypred,yarr = [],[]
+        for i in range(x_train.shape[0]):
+            _, y_pred, y = self.predict_target(workload_id, x_train, y_train)
+            yarr.append(y.reshape(-1)[0])
+            ypred.append(y_pred.reshape(-1)[0])
+            x_train, y_train = np.roll(x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
+        return (ypred, yarr)
 
     def compute_score(self) -> float:
         logger.info('Computes score called.')
         y_arr, ypred_arr = [], []
-
-        for entry in tqdm(list(self.unique_workloads_dev)):
-            idxs = np.where(self.row_labels_dev == entry)
-            x_train = self.X_dev[idxs]
-            y_train = self.y_dev[idxs]
-            for i in range(x_train.shape[0]):
-                _, y_pred, y = self.predict_target(entry, x_train, y_train)
-                y_arr.append(y.reshape(-1)[0])
-                ypred_arr.append(y_pred.reshape(-1)[0])
-                x_train, y_train = np.roll(x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
-        breakpoint()
-        y_arr = np.array(y_arr)
-        y_pred = np.array(ypred_arr)
-        logger.info(f'Shapes: y_pred {y_pred.shape}, y_arr {y_arr.shape}')
-        mse = np.mean((y_pred-y_arr)**2)
+        with multiprocessing.Pool(self.pool_workers) as pool:
+            results = list(
+            tqdm.tqdm(
+                pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size), total=len(self.unique_workloads_dev)))
+        mse = np.mean((results[:,1,:]-results[:,0,:])**2)
         logger.info(f'MSE: {mse}')
+        """
         plt.figure(1)
         plt.scatter(y_arr, ypred_arr)
         plt.xlabel('y')
@@ -260,5 +266,5 @@ class Workload:
         plt.figure(3)
         plt.hist(np.array(self.distances).reshape(-1), np.arange(0, 1, 0.05))
         plt.savefig('histogram.png')
-
+        """
         return mse
