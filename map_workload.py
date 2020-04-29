@@ -251,6 +251,7 @@ class Workload:
             results = list(
                 tqdm.tqdm(
                     pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size), total=len(self.unique_workloads_dev)))
+        results = np.array(results)
         mse = np.mean((results[:, 1, :]-results[:, 0, :])**2)
         logger.info(f'MSE: {mse}')
         """
