@@ -55,7 +55,6 @@ class Workload:
         self.metric_names_dev: List[str] = None
         self.rbf = None
         self.distances = []
- 
 
     def get_params(self, deep=True) -> dict:
         return {
@@ -232,17 +231,17 @@ class Workload:
         self.y_dev = (df[df.columns[METRICS_START:]]).values
         self.metric_names_dev = df.columns[METRICS_START:]
 
-
     def predict_target_helper(self, workload_id: str) -> None:
         idxs = np.where(self.row_labels_dev == workload_id)
         x_train = self.X_dev[idxs]
         y_train = self.y_dev[idxs]
-        ypred,yarr = [],[]
+        ypred, yarr = [], []
         for i in range(x_train.shape[0]):
             _, y_pred, y = self.predict_target(workload_id, x_train, y_train)
             yarr.append(y.reshape(-1)[0])
             ypred.append(y_pred.reshape(-1)[0])
-            x_train, y_train = np.roll(x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
+            x_train, y_train = np.roll(
+                x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
         return (ypred, yarr)
 
     def compute_score(self) -> float:
@@ -250,9 +249,9 @@ class Workload:
         y_arr, ypred_arr = [], []
         with multiprocessing.Pool(self.pool_workers) as pool:
             results = list(
-            tqdm.tqdm(
-                pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size), total=len(self.unique_workloads_dev)))
-        mse = np.mean((results[:,1,:]-results[:,0,:])**2)
+                tqdm.tqdm(
+                    pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size), total=len(self.unique_workloads_dev)))
+        mse = np.mean((results[:, 1, :]-results[:, 0, :])**2)
         logger.info(f'MSE: {mse}')
         """
         plt.figure(1)
