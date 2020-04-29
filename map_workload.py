@@ -115,23 +115,34 @@ class Workload:
 
         return
 
+    def train_models_helper(self, workload_id) -> None:
+        idxs = np.where(self.row_labels == workload_id)
+        self.models[workload_id] = dict()
+        x_train = self.X_train[idxs]
+        results = []
+        for im, metric in enumerate(list(self.metric_names)):
+            y_train = self.y_train[idxs][:, im]
+            #logger.info(f'Shapes of x {x_train.shape}, y {y_train.shape}')
+            gpr = GaussianProcessRegressor(
+                kernel=self.rbf, alpha=self.noise**2)
+            gpr.fit(x_train, y_train)
+            results.append((workload_id, metric, gpr))    
+        return results        
+
     def train_models(self) -> None:
         logger.info('Train models step called for the workload')
         self.rbf = ConstantKernel(
             self.output_variation) * RBF(length_scale=self.length_scale)
-
-        for entry in tqdm.tqdm(self.unique_workloads_train):
-            idxs = np.where(self.row_labels == entry)
-            self.models[entry] = dict()
-            x_train = self.X_train[idxs]
-
-            for im, metric in enumerate(list(self.metric_names)):
-                y_train = self.y_train[idxs][:, im]
-                #logger.info(f'Shapes of x {x_train.shape}, y {y_train.shape}')
-                gpr = GaussianProcessRegressor(
-                    kernel=self.rbf, alpha=self.noise**2)
-                gpr.fit(x_train, y_train)
-                self.models[entry][metric] = gpr
+        with multiprocessing.Pool(self.pool_workers) as pool:
+            results = list(
+                tqdm.tqdm(
+                    pool.imap(self.train_models_helper, self.unique_workloads_train, 
+                              chunksize=self.chunk_size), 
+                              total=len(self.unique_workloads_train)))
+        for l in results:
+            for pair in l:
+                self.models[pair[0]] = self.models.get(pair[0], dict())
+                self.models[pair[0]][pair[1]] = pair[2]
         logger.info('Finished training for unique train workloads')
 
     def map_target_workload(self, id, target_x, target_y) -> tuple():
@@ -142,7 +153,6 @@ class Workload:
         for key in self.unique_workloads_train:
             #logger.info(f'Mapper target_x {target_x.shape}')
             y_pred = np.array([])
-
             for metric in list(self.metric_names):
                 gpr = self.models[key][metric]
                 outputs = gpr.predict(target_x)
