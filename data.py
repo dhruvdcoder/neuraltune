@@ -2,7 +2,7 @@ import pandas as pd
 from pathlib import Path
 from typing import List
 import numpy as np
-from sklearn.preprocessing import RobustScaler
+from sklearn.preprocessing import RobustScaler, StandardScaler
 from server.analysis.preprocessing import Bin, get_shuffle_indices
 import logging
 logger = logging.getLogger(__name__)
@@ -25,7 +25,8 @@ class Data:
         self.metric_names = None
 
         if normalizer is None:
-            self.normalizer = Bin(bin_start=1, axis=0)
+            #self.normalizer = Bin(bin_start=1, axis=0)
+            self.normalizer = StandardScaler(copy=False)
             logger.info("Created default Bin normalizer")
         else:
             self.normalizer = normalizer
@@ -39,6 +40,7 @@ class Data:
     def preprocess(self) -> None:
         logger.info(f"Data shape before preprocessing {self.all_data.shape}")
         logger.info(f"Data shape before normalizing {self.all_data.shape}")
+        #breakpoint()
         normal = self.normalizer.fit_transform(self.all_data)
         logger.info(f"Data shape after normalizing {normal.shape}")
         # remove const metrics
