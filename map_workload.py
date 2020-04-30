@@ -40,6 +40,8 @@ class Workload:
         self.threshold = 0
         self.pool_workers = 5
         self.chunk_size = 2
+        self.mode = 'train' 
+        self.method='baseline'
         for param, val in list(parameters.items()):
             setattr(self, param, val)
         self.X_scaler = self.X_scaler if self.X_scaler else StandardScaler(
@@ -55,6 +57,7 @@ class Workload:
         self.metric_names_dev: List[str] = None
         self.rbf = None
         self.distances = []
+        
 
     def get_params(self, deep=True) -> dict:
         return {
@@ -246,13 +249,28 @@ class Workload:
         x_train = self.X_dev[idxs]
         y_train = self.y_dev[idxs]
         ypred, yarr = [], []
+        workload = []
         for i in range(x_train.shape[0]):
             _, y_pred, y = self.predict_target(workload_id, x_train, y_train)
             yarr.append(y.reshape(-1)[0])
             ypred.append(y_pred.reshape(-1)[0])
+            workload.append(workload_id)
+            if self.mode == 'test':
+                break
             x_train, y_train = np.roll(
                 x_train, -1, axis=0), np.roll(y_train, -1, axis=0)
-        return (ypred, yarr)
+        ypred = np.array(ypred).reshape(-1,1).astype(float)
+        yarr = np.array(yarr).reshape(-1,1).astype(float)
+        workload = np.array(workload).reshape(-1,1)
+        return np.concatenate([ypred,yarr, workload], axis=-1)
+
+    def inverse_trainsform_helper(self, y):
+        y = y.reshape(-1)
+        temp = np.zeros((y.shape[0], len(self.pruned_metrics)))
+        latency_idx = np.where(self.metric_names_dev == LATENCY)[0]
+        temp[:, latency_idx] = y.reshape(-1,1)
+        y = self.y_scaler.inverse_transform(temp)
+        return y[:,latency_idx]
 
     def compute_score(self) -> float:
         logger.info('Computes score called.')
@@ -260,10 +278,28 @@ class Workload:
         with multiprocessing.Pool(self.pool_workers) as pool:
             results = list(
                 tqdm.tqdm(
-                    pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size), total=len(self.unique_workloads_dev)))
+                    pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size),
+                              total=len(self.unique_workloads_dev)))
+        #breakpoint()
         results = np.array(results)
-        mse = np.mean((results[:, 1, :]-results[:, 0, :])**2)
-        logger.info(f'MSE: {mse}')
+        results = np.concatenate(results, axis=0) #y,ypred, workload_ids
+        logger.info(f'Shapes final result {results.shape}')
+        ypred = results[:, 0].astype(float)
+        y = results[:, 1].astype(float)
+        mse = np.mean((y-ypred)**2)
+        mape = np.mean(np.abs((y -ypred)/y))*100
+        np.save(f'{self.mode}_{self.method}_normalised.npy', results) 
+        logger.info(f'Normalised MSE: {mse}, mape: {mape}')
+        #breakpoint()
+        ypred = self.inverse_trainsform_helper(ypred)
+        y = self.inverse_trainsform_helper(y)
+        mse_u = np.mean((y-ypred)**2)
+        mape_u = np.mean(np.abs((y -ypred)/y))*100
+        logger.info(f'After inverse transform mse: {mse_u}, mape: {mape_u}')
+        results[:,:-1]=np.concatenate([ypred,y], axis=1)
+        np.save(f'{self.mode}_{self.method}_transformed.npy', results) 
+        return mape, mape_u, mse, mse_u
+
         """
         plt.figure(1)
         plt.scatter(y_arr, ypred_arr)
@@ -277,4 +313,4 @@ class Workload:
         plt.hist(np.array(self.distances).reshape(-1), np.arange(0, 1, 0.05))
         plt.savefig('histogram.png')
         """
-        return mse
+        

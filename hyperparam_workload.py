@@ -19,10 +19,10 @@ logger = logging.getLogger(__name__)
 
 def get_parser():
     parser = fa_parser()
-    parser.add_argument('--length_scale', type=float, default=0.73)
+    parser.add_argument('--length_scale', type=float, default=4.62)
     parser.add_argument('--output_variation', type=float, default=1.2)
-    parser.add_argument('--noise', type=float, default=0.49)
-    parser.add_argument('--topk', type=int, default=5)
+    parser.add_argument('--noise', type=float, default=0.54)
+    parser.add_argument('--topk', type=int, default=1)
     parser.add_argument('--threshold', type=float, default=0)
     parser.add_argument('--no_wandb', action='store_true')
     return parser
@@ -63,7 +63,9 @@ if __name__ == '__main__':
     w.preprocess()
     w.train_models()
     w.read_dev_set(args.dev_data)
-    mse = w.compute_score()
-    logger.info(f'MSE: {mse}')
+    #w.read_dev_set('.data/test_combined.csv')
+    mape, mape_u, mse, mse_u = w.compute_score()
+
+    logger.info({'n_mape': mape, 'mape': mape_u, 'mse': mse_u, 'mse_n': mse})
     if not args.no_wandb:
-        wandb.log({'mse': mse})
+        wandb.log({'n_mape': mape, 'mape': mape_u, 'n_mse': mse, 'mse': mse_u})
