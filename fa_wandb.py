@@ -50,6 +50,6 @@ if __name__ == '__main__':
     score = compute_score(X.T, args)
 
     if score == -1 * math.inf:
-        score = -1e304
+        score = -1e40
     wandb.log({'score': score})
     logging.info(f'{args.ncomponents} : {score}')

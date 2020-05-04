@@ -68,8 +68,7 @@ if __name__ == '__main__':
 
     logger.info({'n_mape': mape, 'mape': mape_u, 'mse': mse_u, 'mse_n': mse})
     if not args.no_wandb:
-        wandb.log({'n_mape': mape, 'mape': mape_u, 'mse': mse_u, 'mse_n': mse})
-
+        wandb.log({'n_mape': mape, 'mape': mape_u, 'n_mse': mse, 'mse': mse_u})
 
         """
         Baseline Defaults: 
