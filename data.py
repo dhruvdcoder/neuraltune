@@ -25,8 +25,8 @@ class Data:
         self.metric_names = None
 
         if normalizer is None:
-            #self.normalizer = Bin(bin_start=1, axis=0)
-            self.normalizer = StandardScaler(copy=False)
+            self.normalizer = Bin(bin_start=1, axis=0)
+            #self.normalizer = StandardScaler(copy=False)
             logger.info("Created default Bin normalizer")
         else:
             self.normalizer = normalizer
