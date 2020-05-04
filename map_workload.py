@@ -107,10 +107,10 @@ class Workload:
         # Fit first with training data to transorm the target later
         self.X_scaler.fit(self.X_train)
         self.y_scaler.fit(self.y_train)
-        self.y_binner.fit(self.y_train)
+        
         self.X_train = self.X_scaler.transform(self.X_train)
         self.y_train = self.y_scaler.transform(self.y_train)
-        #self.y_train = self.y_binner.transform(self.y_train)
+        self.y_binner.fit(self.y_train)
         logger.info(
             f'Shapes after scaling and normalizing: X:{self.X_train.shape}, Y: {self.y_train.shape}'
         )
@@ -150,9 +150,8 @@ class Workload:
 
     def map_target_workload(self, id, target_x, target_y) -> tuple():
         #logger.info(f'Workload mapping called for {id}')
-        # target_y = self.y_binner.transform(target_y) #Needs to be binned for euclidian distance
+        target_y = self.y_binner.transform(target_y) #Needs to be binned for euclidian distance
         scores = []
-
         for key in self.unique_workloads_train:
             #logger.info(f'Mapper target_x {target_x.shape}')
             y_pred = np.array([])
@@ -162,8 +161,9 @@ class Workload:
                 y_pred = outputs.reshape(
                     -1, 1) if not y_pred.shape[0] else np.concatenate(
                         [y_pred, outputs.reshape(-1, 1)], axis=1)
-            #binned_pred = self.y_binner.transform(y_pred)
-            binned_pred = y_pred
+            binned_pred = self.y_binner.transform(y_pred)
+            #binned_pred = y_pred
+            #breakpoint()
             dists = np.sqrt(
                 np.sum(np.square(np.subtract(binned_pred, target_y)), axis=1))
             scores.append(np.mean(dists))
@@ -227,7 +227,7 @@ class Workload:
             subset=df.columns[:-1], keep='first').to_numpy()
         train_x, train_y = df[:, :-1], df[:, -1:]
 
-        # Train gpr model to predict latency
+        # Train gpr model to predict latencyalpha
         gpr = GaussianProcessRegressor(kernel=self.rbf, alpha=self.noise**2)
         gpr.fit(train_x, train_y)
         y = gpr.predict(test_x)
@@ -290,7 +290,6 @@ class Workload:
         mape = np.mean(np.abs((y -ypred)/y))*100
         np.save(f'{self.mode}_{self.method}_normalised.npy', results) 
         logger.info(f'Normalised MSE: {mse}, mape: {mape}')
-        #breakpoint()
         ypred = self.inverse_trainsform_helper(ypred)
         y = self.inverse_trainsform_helper(y)
         mse_u = np.mean((y-ypred)**2)

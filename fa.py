@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
         '--n_components',
         type=int,
-        default=10,
+        default=5,
         help='n components to be considered for FA')
     parser.add_argument(
         '--max_comp',

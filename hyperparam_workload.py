@@ -19,9 +19,9 @@ logger = logging.getLogger(__name__)
 
 def get_parser():
     parser = fa_parser()
-    parser.add_argument('--length_scale', type=float, default=4.62)
-    parser.add_argument('--output_variation', type=float, default=1.2)
-    parser.add_argument('--noise', type=float, default=0.54)
+    parser.add_argument('--length_scale', type=float, default=1)
+    parser.add_argument('--output_variation', type=float, default=1)
+    parser.add_argument('--noise', type=float, default=0.1) 
     parser.add_argument('--topk', type=int, default=1)
     parser.add_argument('--threshold', type=float, default=0)
     parser.add_argument('--no_wandb', action='store_true')
@@ -69,3 +69,10 @@ if __name__ == '__main__':
     logger.info({'n_mape': mape, 'mape': mape_u, 'mse': mse_u, 'mse_n': mse})
     if not args.no_wandb:
         wandb.log({'n_mape': mape, 'mape': mape_u, 'n_mse': mse, 'mse': mse_u})
+
+        """
+        Baseline Defaults: 
+        noise=0.12, mape = 61.3337
+        Noise=0.1 , mape = 69.339
+        Noise=0.15 mape = 64.57
+        """
