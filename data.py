@@ -23,8 +23,9 @@ class Data:
         self.all_metric_names: List[str] = None
         self.X = None
         self.metric_names = None
-
+        self.scaler = StandardScaler(copy=False)
         if normalizer is None:
+
             self.normalizer = Bin(bin_start=1, axis=0)
             #self.normalizer = StandardScaler(copy=False)
             logger.info("Created default Bin normalizer")
@@ -41,7 +42,9 @@ class Data:
         logger.info(f"Data shape before preprocessing {self.all_data.shape}")
         logger.info(f"Data shape before normalizing {self.all_data.shape}")
         #breakpoint()
-        normal = self.normalizer.fit_transform(self.all_data)
+        
+        scaled_data = self.scaler.fit_transform(self.all_data)
+        normal = self.normalizer.fit_transform(scaled_data)
         logger.info(f"Data shape after normalizing {normal.shape}")
         # remove const metrics
         non_const_matrix = []
