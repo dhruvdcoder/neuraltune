@@ -23,7 +23,7 @@ class SimpleNN(Model):
         self.ff_rep = representation_network
         self.ff_reg = regression_network
         self.output = torch.nn.Linear(self.ff_reg.get_output_dim(), 1)
-        self.loss_f = torch.nn.MSELoss()
+        self.loss_f = torch.nn.L1Loss()
 
     def check_dimensions(self,
                          a: torch.Tensor,
@@ -59,7 +59,10 @@ class SimpleNN(Model):
         output_dict: Dict[str, Optional[torch.Tensor]] = {'pred': pred}
 
         if y is not None:
-            output_dict['loss'] = self.loss_f(pred, y)
+            #output_dict['loss'] = self.loss_f(pred, y)
+            ratio = pred / y
+            ref = torch.ones_like(ratio)
+            output_dict['loss'] = self.loss_f(ratio, ref)
         else:
             output_dict['loss'] = None
 

@@ -20,15 +20,20 @@ class NeuralData:
     def __init__(self, **parameters: Any) -> None:
         self.set_size = 5
         self.batch_size = 1
-        self.pruned_metrics: List[str] = [
-            'executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi',
-            'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg',
-            'worker_2.Memory_MB.cached', 'mimic_cpu_util',
-            'worker_1.Paging_and_Virtual_Memory.pgpgout',
-            'executor.resultSerializationTime.avg',
-            'driver.LiveListenerBus.numEventsPosted.avg_increase',
-            'executor.jvm.non-heap.committed.avg_period', 'latency'
-        ]
+        # self.pruned_metrics: List[str] = [
+        #    'executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi',
+        #    'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg',
+        #    'worker_2.Memory_MB.cached', 'mimic_cpu_util',
+        #    'worker_1.Paging_and_Virtual_Memory.pgpgout',
+        #    'executor.resultSerializationTime.avg',
+        #    'driver.LiveListenerBus.numEventsPosted.avg_increase',
+        #'executor.jvm.non-heap.committed.avg_period', 'latency'
+        # ]
+        self.pruned_metrics: List[str] = parameters.get(
+            'pruned_metrics', [
+                'worker_2.Processes.Blocked', 'executor.runTime.avg',
+                'worker_2.Disk_%Busy.sdi3', 'latency'
+            ])
         self.type_flag = 'train'
         self.train_data = None
         self.train_labels = None

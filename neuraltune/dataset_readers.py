@@ -5,16 +5,26 @@ from allennlp.data.fields import ArrayField
 from pathlib import Path
 from .data_utils import NeuralData
 import numpy as np
+import pickle
 import logging
 logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register('neuraltune-reader')
 class NeuraltuneReader(DatasetReader):
-    def __init__(self, set_size: int = 5, type_flag: str = 'train') -> None:
+    def __init__(self,
+                 set_size: int = 5,
+                 type_flag: str = 'train',
+                 pruned_metrics=[
+                     'worker_2.Processes.Blocked', 'executor.runTime.avg',
+                     'worker_2.Disk_%Busy.sdi3', 'latency'
+                 ]) -> None:
         super().__init__(lazy=True)
         self.type_flag = type_flag
-        self.lazy_reader = NeuralData(set_size=set_size, type_flag=type_flag)
+        self.lazy_reader = NeuralData(
+            set_size=set_size,
+            type_flag=type_flag,
+            pruned_metrics=pruned_metrics)
         self.done_read = False
 
     def _read(self, path: str) -> Iterable[Instance]:
@@ -42,3 +52,12 @@ class NeuraltuneReader(DatasetReader):
                     a=a_f,
                     b=b_f,
                 ))
+
+
+@DatasetReader.register('neuraltune-static-reader')
+class NeuraltuneStaticReader(DatasetReader):
+    def _read(self, path: str) -> Iterable[Instance]:
+        with open(path, 'rb') as f:
+            instances = pickle.load(f)
+
+        return instances
