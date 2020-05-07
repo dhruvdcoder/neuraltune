@@ -5,16 +5,27 @@ from allennlp.data.fields import ArrayField
 from pathlib import Path
 from .data_utils import NeuralData
 import numpy as np
+import pickle
 import logging
 logger = logging.getLogger(__name__)
 
 
 @DatasetReader.register('neuraltune-reader')
 class NeuraltuneReader(DatasetReader):
-    def __init__(self, set_size: int = 5, type_flag: str = 'train') -> None:
+    def __init__(self,
+                 pruned_metrics: List,
+                 set_size: int = 5,
+                 type_flag: str = 'train',
+                 scaler_path: str = None) -> None:
         super().__init__(lazy=True)
         self.type_flag = type_flag
-        self.lazy_reader = NeuralData(set_size=set_size, type_flag=type_flag)
+
+        if scaler_path is None:
+            scaler_path = 'metrics_scaler__' + '__'.join(
+                pruned_metrics) + '.pkl'
+
+        self.lazy_reader = NeuralData(
+            set_size=set_size, type_flag=type_flag, scaler_path=scaler_path)
         self.done_read = False
 
     def _read(self, path: str) -> Iterable[Instance]:

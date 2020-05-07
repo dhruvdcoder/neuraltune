@@ -3,9 +3,12 @@ import os
 from typing import List, Any
 import numpy as np
 import logging
+
+from joblib import dump, load
 import argparse
 import math
 import itertools
+from pathlib import Path
 from sklearn.preprocessing import StandardScaler
 
 np.random.seed(123)
@@ -15,20 +18,22 @@ KNOBS = [f'k{i}' for i in range(1, 9)] + [f's{i}' for i in range(1, 5)]
 LATENCY = 'latency'
 METRICS_START = 13
 
+default_metrics = [
+    'executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi',
+    'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg',
+    'worker_2.Memory_MB.cached', 'mimic_cpu_util',
+    'worker_1.Paging_and_Virtual_Memory.pgpgout',
+    'executor.resultSerializationTime.avg',
+    'driver.LiveListenerBus.numEventsPosted.avg_increase',
+    'executor.jvm.non-heap.committed.avg_period', 'latency'
+]
+
 
 class NeuralData:
     def __init__(self, **parameters: Any) -> None:
         self.set_size = 5
         self.batch_size = 1
-        self.pruned_metrics: List[str] = [
-            'executor.jvm.heap.committed.avg', 'worker_1.Disk_Write_KB/s.sdi',
-            'worker_1.Disk_Block_Size.sdi2', 'executor.runTime.avg',
-            'worker_2.Memory_MB.cached', 'mimic_cpu_util',
-            'worker_1.Paging_and_Virtual_Memory.pgpgout',
-            'executor.resultSerializationTime.avg',
-            'driver.LiveListenerBus.numEventsPosted.avg_increase',
-            'executor.jvm.non-heap.committed.avg_period', 'latency'
-        ]
+
         self.type_flag = 'train'
         self.train_data = None
         self.train_labels = None
@@ -41,10 +46,19 @@ class NeuralData:
         self.shuffled_idxs = None
         self.index = 0
         self.knob_scaler = StandardScaler(copy=False)
-        self.metrics_scaler = StandardScaler(copy=False)
 
         for param, val in list(parameters.items()):
             setattr(self, param, val)
+
+        self.pruned_metrics: List[str] = parameters.get(
+            'pruned_metrics', None) or default_metrics
+
+        if (self.scaler_path is not None) and Path(self.scaler_path).is_file():
+            logger.info(f"Loading scaler from {self.scaler_path}")
+            self.metrics_scaler = load(self.scaler_path)
+        else:
+            self.metrics_scaler = StandardScaler(copy=False)
+            logger.info("Created a new scaler")
         self.latency_idx = None
 
     def read_data_train(self, folder_path: str) -> None:
@@ -99,6 +113,8 @@ class NeuralData:
             data[:, METRICS_START:] = self.metrics_scaler.transform(
                 data[:, METRICS_START:])
         setattr(self, f'{self.type_flag}_data', data)
+        logger.info(f"Saving metrics_scaler to {self.scaler_path}")
+        dump(self.metrics_scaler, self.scaler_path)
 
         return
 

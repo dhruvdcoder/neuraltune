@@ -4,11 +4,15 @@ local project_root = std.extVar('project_root');
     type:
       'neuraltune-reader',
     type_flag: 'train',
+    pruned_metrics: ['executor.jvm.non-heap.committed.avg_increase', 'executor.resultSerializationTime.avg', 'worker_1.Paging_and_Virtual_Memory.pgpgout', 'worker_1.Disk_Write_KB/s.sdi', 'worker_1.Disk_Read_KB/s.dm-0', 'executor.jvm.non-heap.committed.avg_period', 'executor.jvm.pools.PS-Old-Gen.committed.avg', 'latency'],
+    scaler_path: 'pruned_metrics1.pkl',
   },
   validation_dataset_reader: {
     type:
       'neuraltune-reader',
     type_flag: 'dev',
+    pruned_metrics: ['executor.jvm.non-heap.committed.avg_increase', 'executor.resultSerializationTime.avg', 'worker_1.Paging_and_Virtual_Memory.pgpgout', 'worker_1.Disk_Write_KB/s.sdi', 'worker_1.Disk_Read_KB/s.dm-0', 'executor.jvm.non-heap.committed.avg_period', 'executor.jvm.pools.PS-Old-Gen.committed.avg', 'latency'],
+    scaler_path: 'pruned_metrics1.pkl',
   },
   train_data_path: project_root + '/.data',
   validation_data_path: project_root + '/.data',
@@ -38,6 +42,8 @@ local project_root = std.extVar('project_root');
       num_layers: 1,
       activations: 'tanh',
     },
+    scaler_path: 'pruned_metrics1.pkl',
+
   },
   trainer: {
     type: 'callback',
