@@ -18,13 +18,54 @@ logger = logging.getLogger(__name__)
 
 
 def get_parser():
-    parser = fa_parser()
-    parser.add_argument('--length_scale', type=float, default=1)
-    parser.add_argument('--output_variation', type=float, default=1)
-    parser.add_argument('--noise', type=float, default=0.1) 
+    #parser = fa_parser()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '--n_components',
+        type=int,
+        default=26,
+        help='n components to be considered for FA')
+    parser.add_argument(
+        '--max_comp',
+        type=int,
+        default=1000,
+        help='max components to be considered for FA')
+    parser.add_argument(
+        '--step', type=int, default=1, help='Step size for grid')
+    parser.add_argument(
+        '--chunk',
+        type=int,
+        default=2,
+        help='chunk size for imap multiptocessing')
+    parser.add_argument(
+        '--workers', type=int, default=5, help='pool size for multiprocessing')
+    parser.add_argument(
+        '--cv_jobs',
+        type=int,
+        default=1,
+        help='cpus to assign to each param evaluation')
+    parser.add_argument('--folds', type=int, default=3, help='K for Kfolds')
+    parser.add_argument(
+        '--output',
+        type=Path,
+        default='output',
+        help='Filepath to save transformed X')
+    parser.add_argument(
+        '--cache',
+        type=Path,
+        default='fa_cache',
+        help='Filepath to save transformed X')
+    parser.add_argument(
+        '--input_data', default=Path('.data/offline_workload.CSV'), type=Path)
+    parser.add_argument(
+        '--dev_data', default=Path('.data/online_workload_B.CSV'), type=Path)
+    parser.add_argument('--length_scale', type=float, default=1.206)
+    parser.add_argument('--output_variation', type=float, default=0.7245)
+    parser.add_argument('--noise', type=float, default=0.03033) 
     parser.add_argument('--topk', type=int, default=1)
-    parser.add_argument('--threshold', type=float, default=0)
+    parser.add_argument('--threshold', type=float, default=4.272)
     parser.add_argument('--no_wandb', action='store_true')
+    parser.add_argument('--kmeans_runs', default=2, type=int)
     return parser
 
 if __name__ == '__main__':
@@ -58,7 +99,7 @@ if __name__ == '__main__':
     w = Workload(length_scale = args.length_scale, output_variation=args.output_variation,
                  pruned_metrics = pruned_metrics, noise=args.noise, 
                  topk=args.topk, threshold=args.threshold, chunk_size=args.chunk,
-                 pool_workers=args.workers)
+                 pool_workers=args.workers, method='threshold')
     w.read(args.input_data)
     w.preprocess()
     w.train_models()

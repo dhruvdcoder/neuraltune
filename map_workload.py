@@ -179,12 +179,11 @@ class Workload:
         #logger.info(f'Min scores: {scores[min_idx]}')
         workload_id = self.unique_workloads_train[min_idx]
 
-        # Now we know which workload from the train set is the nearest neighbor. Need to augment its x and y walues to test.
+        # Now we know which workload from the train set is the nearest neighbor. Need to augment its x and y values to test.
         idxs = np.isin(self.row_labels, workload_id)
         workload_x = self.X_train[idxs]
         workload_y = self.y_train[idxs]
         #logger.info(f'Workload {id} mapped to {workload_id}')
-
         return (workload_id, workload_x, workload_y)
 
     def predict_target(self, id, target_x, target_y) -> tuple:
@@ -297,6 +296,14 @@ class Workload:
         logger.info(f'After inverse transform mse: {mse_u}, mape: {mape_u}')
         results[:,:-1]=np.concatenate([ypred,y], axis=1)
         np.save(f'{self.mode}_{self.method}_transformed.npy', results) 
+        if self.mode=='test':
+            a= np.load(f'{self.mode}_{self.method}_transformed.npy', allow_pickle=True)
+            df = pd.read_csv('.data/test.CSV')
+            for index, row in df.iterrows(): 
+                for entry in a:
+                    if row['workload id'] == entry[-1]:
+                        df.loc[index, "latency prediction"] = entry[0]
+            df.to_csv(f'{self.method}_test.csv', index=False)
         return mape, mape_u, mse, mse_u
 
         """
