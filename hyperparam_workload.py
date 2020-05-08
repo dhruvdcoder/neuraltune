@@ -66,6 +66,8 @@ def get_parser():
     parser.add_argument('--threshold', type=float, default=4.272)
     parser.add_argument('--no_wandb', action='store_true')
     parser.add_argument('--kmeans_runs', default=2, type=int)
+    parser.add_argument('--method', type=str, default='baseline')
+    parser.add_argument('--mode', type=str, default='train')
     return parser
 
 if __name__ == '__main__':
@@ -99,12 +101,11 @@ if __name__ == '__main__':
     w = Workload(length_scale = args.length_scale, output_variation=args.output_variation,
                  pruned_metrics = pruned_metrics, noise=args.noise, 
                  topk=args.topk, threshold=args.threshold, chunk_size=args.chunk,
-                 pool_workers=args.workers, method='threshold')
+                 pool_workers=args.workers, method=args.method, mode=args.mode)
     w.read(args.input_data)
     w.preprocess()
     w.train_models()
     w.read_dev_set(args.dev_data)
-    #w.read_dev_set('.data/test_combined.csv')
     mape, mape_u, mse, mse_u = w.compute_score()
 
     logger.info({'n_mape': mape, 'mape': mape_u, 'mse': mse_u, 'mse_n': mse})
