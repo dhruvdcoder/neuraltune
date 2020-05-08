@@ -57,3 +57,4 @@ celery==4.4.2
 wandb==0.8.32
 tqdm==4.45.0   
 git+https://github.com/dhruvdcoder/ottertune.git
+allennlp==0.9.0
