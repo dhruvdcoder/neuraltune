@@ -9,7 +9,7 @@ import argparse
 import math
 import itertools
 from pathlib import Path
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, RobustScaler, MinMaxScaler
 
 np.random.seed(123)
 logger = logging.getLogger(__name__)
@@ -33,7 +33,6 @@ class NeuralData:
     def __init__(self, **parameters: Any) -> None:
         self.set_size = 5
         self.batch_size = 1
-
         self.type_flag = 'train'
         self.train_data = None
         self.train_labels = None
@@ -114,7 +113,9 @@ class NeuralData:
                 data[:, METRICS_START:])
         setattr(self, f'{self.type_flag}_data', data)
         logger.info(f"Saving metrics_scaler to {self.scaler_path}")
+        logger.info(f"Saving knob scaler to knob_scaler.pkl")
         dump(self.metrics_scaler, self.scaler_path)
+        dump(self.knob_scaler, 'knob_scaler.pkl')
 
         return
 
