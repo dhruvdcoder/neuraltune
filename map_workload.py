@@ -57,6 +57,7 @@ class Workload:
         self.metric_names_dev: List[str] = None
         self.rbf = None
         self.distances = []
+        self.neighbors = []
         
 
     def get_params(self, deep=True) -> dict:
@@ -115,7 +116,6 @@ class Workload:
             f'Shapes after scaling and normalizing: X:{self.X_train.shape}, Y: {self.y_train.shape}'
         )
         logger.info('Preprocessing step done in workload mapping')
-
         return
 
     def train_models_helper(self, workload_id) -> None:
@@ -149,11 +149,9 @@ class Workload:
         logger.info('Finished training for unique train workloads')
 
     def map_target_workload(self, id, target_x, target_y) -> tuple():
-        #logger.info(f'Workload mapping called for {id}')
         target_y = self.y_binner.transform(target_y) #Needs to be binned for euclidian distance
         scores = []
         for key in self.unique_workloads_train:
-            #logger.info(f'Mapper target_x {target_x.shape}')
             y_pred = np.array([])
             for metric in list(self.metric_names):
                 gpr = self.models[key][metric]
@@ -162,28 +160,32 @@ class Workload:
                     -1, 1) if not y_pred.shape[0] else np.concatenate(
                         [y_pred, outputs.reshape(-1, 1)], axis=1)
             binned_pred = self.y_binner.transform(y_pred)
-            #binned_pred = y_pred
-            #breakpoint()
             dists = np.sqrt(
-                np.sum(np.square(np.subtract(binned_pred, target_y)), axis=1))
+                np.sum(np.square(np.subtract(binned_pred, target_y)), axis=0))
             scores.append(np.mean(dists))
         scores = np.array(scores)
         self.distances.append(scores)
         min_idx = []
 
         if self.threshold:
-            min_idx = np.where(scores < self.threshold)
+            min_idx = np.where(scores < self.threshold)[0]
+
 
         if len(min_idx) == 0:
             min_idx = np.argpartition(scores, self.topk)[:self.topk]
-        #logger.info(f'Min scores: {scores[min_idx]}')
+
+
         workload_id = self.unique_workloads_train[min_idx]
 
         # Now we know which workload from the train set is the nearest neighbor. Need to augment its x and y values to test.
         idxs = np.isin(self.row_labels, workload_id)
         workload_x = self.X_train[idxs]
         workload_y = self.y_train[idxs]
-        #logger.info(f'Workload {id} mapped to {workload_id}')
+
+        if self.mode=='test':
+            f = open(f'temp/{self.method}_{id}.txt', 'w')
+            f.write("["+",".join(workload_id)+"]")
+            f.close()
         return (workload_id, workload_x, workload_y)
 
     def predict_target(self, id, target_x, target_y) -> tuple:
@@ -206,7 +208,7 @@ class Workload:
         target_x, target_y = target_x[:-1, :], target_y[:-1, :]
 
         # Map target to closest workload
-        _, x, pred_y = self.map_target_workload(id, target_x, target_y)
+        neighbor, x, pred_y = self.map_target_workload(id, target_x, target_y)
 
         # Concatenate target worload and map workload output. Retain original latency values if knob config repeats.
         train_x = np.concatenate([target_x, x], axis=0)
@@ -220,7 +222,6 @@ class Workload:
         )
 
         temp_data = np.concatenate([train_x, train_y], axis=1)
-        # breakpoint()
         df = pd.DataFrame(temp_data)
         df = df.drop_duplicates(
             subset=df.columns[:-1], keep='first').to_numpy()
@@ -231,7 +232,7 @@ class Workload:
         gpr.fit(train_x, train_y)
         y = gpr.predict(test_x)
         test_y = test_y.reshape(-1)[latency_idx].reshape(-1)
-
+        
         return (id, y, test_y.reshape(-1))
 
     def read_dev_set(self, path) -> None:
@@ -279,7 +280,6 @@ class Workload:
                 tqdm.tqdm(
                     pool.imap(self.predict_target_helper, self.unique_workloads_dev, chunksize=self.chunk_size),
                               total=len(self.unique_workloads_dev)))
-        #breakpoint()
         results = np.array(results)
         results = np.concatenate(results, axis=0) #y,ypred, workload_ids
         logger.info(f'Shapes final result {results.shape}')
@@ -289,6 +289,8 @@ class Workload:
         mape = np.mean(np.abs((y -ypred)/y))*100
         np.save(f'{self.mode}_{self.method}_normalised.npy', results) 
         logger.info(f'Normalised MSE: {mse}, mape: {mape}')
+
+        #Inverse transform
         ypred = self.inverse_trainsform_helper(ypred)
         y = self.inverse_trainsform_helper(y)
         mse_u = np.mean((y-ypred)**2)
@@ -296,6 +298,8 @@ class Workload:
         logger.info(f'After inverse transform mse: {mse_u}, mape: {mape_u}')
         results[:,:-1]=np.concatenate([ypred,y], axis=1)
         np.save(f'{self.mode}_{self.method}_transformed.npy', results) 
+
+        #saving predictions
         if self.mode=='test':
             a= np.load(f'{self.mode}_{self.method}_transformed.npy', allow_pickle=True)
             df = pd.read_csv('.data/test.CSV')
@@ -304,19 +308,5 @@ class Workload:
                     if row['workload id'] == entry[-1]:
                         df.loc[index, "latency prediction"] = entry[0]
             df.to_csv(f'{self.method}_test.csv', index=False)
-        return mape, mape_u, mse, mse_u
 
-        """
-        plt.figure(1)
-        plt.scatter(y_arr, ypred_arr)
-        plt.xlabel('y')
-        plt.ylabel('y_predict')
-        plt.savefig('scatter.png')
-        plt.figure(2)
-        plt.plot(range(len(y_arr)), y_arr)
-        plt.savefig(f'{LATENCY}.png')
-        plt.figure(3)
-        plt.hist(np.array(self.distances).reshape(-1), np.arange(0, 1, 0.05))
-        plt.savefig('histogram.png')
-        """
-        
+        return mape, mape_u, mse, mse_u

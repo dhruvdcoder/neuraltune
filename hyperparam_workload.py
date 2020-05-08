@@ -104,7 +104,6 @@ if __name__ == '__main__':
     w.preprocess()
     w.train_models()
     w.read_dev_set(args.dev_data)
-    #w.read_dev_set('.data/test_combined.csv')
     mape, mape_u, mse, mse_u = w.compute_score()
 
     logger.info({'n_mape': mape, 'mape': mape_u, 'mse': mse_u, 'mse_n': mse})
