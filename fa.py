@@ -71,7 +71,7 @@ def get_parser():
     parser.add_argument(
         '--n_components',
         type=int,
-        default=5,
+        default=50,
         help='n components to be considered for FA')
     parser.add_argument(
         '--max_comp',
@@ -106,7 +106,7 @@ def get_parser():
     parser.add_argument(
         '--input_data', default=Path('.data/offline_workload.CSV'), type=Path)
     parser.add_argument(
-        '--dev_data', default=Path('.data/online_workload_B.CSV'), type=Path)
+        '--dev_data', default=Path('.data/test_combined.csv'), type=Path)
     parser.add_argument('--kmeans_runs', default=2, type=int)
     return parser
 

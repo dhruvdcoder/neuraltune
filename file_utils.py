@@ -32,5 +32,22 @@ def generate_test_predictions_csv():
         f.close()
         w.close()
 
+def combine_csv_neighbors():
+    for method in ['baseline', 'topk', 'threshold']:
+        print(method)
+        df = pd.read_csv(f'temp2/{method}_test.csv')
+        df['neighbors'] = ''
+        w = open(f'temp2/{method}_neighbors.txt')
+        lines = w.read().split('\n')
+        for l in lines:
+            entries = l.split(",")
+            for index, row in df.iterrows():
+                if row['workload id'] == entries[0]:
+                    df.loc[index, "neighbors"] = ",".join(entries[1:])
+        df.to_csv(f'temp2/{method}_test.csv', index=False)
+        w.close()
+
+
 if __name__=='__main__':
-    generate_test_predictions_csv()
+    #generate_test_predictions_csv()
+    combine_csv_neighbors()
