@@ -176,7 +176,7 @@ if __name__ == '__main__':
         'executor.jvm.non-heap.committed.avg_period', 'latency'
     ]
     output_path = '.'
-    p = NeuarlData(
+    p = NeuralData(
         train_path=train_path,
         dev_path=dev_path,
         test_path=test_path,
